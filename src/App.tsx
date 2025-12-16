@@ -114,14 +114,31 @@ function App() {
   };
 
   const deleteProfile = (id: string) => {
-    setProfiles((current) => (current || []).filter((p) => p.id !== id));
+    const remaining = profilesList.filter((p) => p.id !== id);
     
-    if (selectedProfileId === id) {
-      const remaining = profilesList.filter((p) => p.id !== id);
-      setSelectedProfileId(remaining.length > 0 ? remaining[0].id : null);
+    // 如果删除后只剩 0 个档案，创建一个随机档案
+    if (remaining.length === 0) {
+      const now = Date.now();
+      const randomProfile: RadarProfile = {
+        id: now.toString(),
+        name: '新档案',
+        dimensions: DEFAULT_DIMENSIONS.map((name) => ({
+          name,
+          value: Math.floor(Math.random() * 3) + 2, // 随机值 2-4
+        })),
+        createdAt: now,
+        updatedAt: now,
+      };
+      setProfiles([randomProfile]);
+      setSelectedProfileId(randomProfile.id);
+      toast.success('档案已删除，已自动创建新档案');
+    } else {
+      setProfiles(remaining);
+      if (selectedProfileId === id) {
+        setSelectedProfileId(remaining[0].id);
+      }
+      toast.success('档案已删除');
     }
-    
-    toast.success('档案已删除');
   };
 
   const duplicateProfile = (id: string) => {
