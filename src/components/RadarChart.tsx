@@ -30,21 +30,15 @@ export function RadarChart({ dimensions, size = 400 }: RadarChartProps) {
       .append('g')
       .attr('transform', `translate(${centerX}, ${centerY})`);
 
-    const rScale = d3.scaleLinear().domain([0, 3]).range([0, radius]);
+    const rScale = d3.scaleLinear().domain([1, 3]).range([0, radius]);
 
     for (let level = 1; level <= levels; level++) {
       const levelRadius = (radius / levels) * level;
-      
-      const points = dimensions.map((_, i) => {
-        const angle = angleSlice * i - Math.PI / 2;
-        return [
-          levelRadius * Math.cos(angle),
-          levelRadius * Math.sin(angle)
-        ];
-      });
 
-      g.append('polygon')
-        .attr('points', points.map(p => p.join(',')).join(' '))
+      g.append('circle')
+        .attr('cx', 0)
+        .attr('cy', 0)
+        .attr('r', levelRadius)
         .attr('fill', 'none')
         .attr('stroke', 'var(--chart-grid)')
         .attr('stroke-width', 1)
