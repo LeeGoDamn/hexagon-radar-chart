@@ -43,7 +43,7 @@ export function ProfileList({
   }
 
   return (
-    <ScrollArea className="h-[600px]">
+    <ScrollArea className="max-h-[calc(100vh-280px)]">
       <div className="space-y-3">
         {profiles.map((profile) => (
           <Card
