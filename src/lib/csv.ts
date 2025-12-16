@@ -48,11 +48,19 @@ export function importFromCSV(csvContent: string): { profiles: RadarProfile[], e
 
     const headers = parseCSVLine(lines[0]);
     
-    if (headers.length < 3 || headers[0] !== '档案名称') {
+    if (headers.length < 2 || headers[0] !== '档案名称') {
       return { profiles: [], error: 'CSV 文件格式不正确，缺少必要的列' };
     }
 
-    const dimensionNames = headers.slice(1, -2);
+    // 检查是否有时间列
+    const hasCreatedAt = headers[headers.length - 2] === '创建时间';
+    const hasUpdatedAt = headers[headers.length - 1] === '更新时间';
+    const hasTimeColumns = hasCreatedAt && hasUpdatedAt;
+    
+    // 获取维度名称（排除档案名称和可选的时间列）
+    const dimensionNames = hasTimeColumns 
+      ? headers.slice(1, -2)
+      : headers.slice(1);
     
     if (dimensionNames.length === 0) {
       return { profiles: [], error: 'CSV 文件中没有维度数据' };
@@ -71,7 +79,12 @@ export function importFromCSV(csvContent: string): { profiles: RadarProfile[], e
       }
 
       const name = values[0];
-      const dimensionValues = values.slice(1, -2).map(v => {
+      
+      // 获取维度值（排除档案名称和可选的时间列）
+      const dimensionValues = (hasTimeColumns 
+        ? values.slice(1, -2)
+        : values.slice(1)
+      ).map(v => {
         const num = parseInt(v);
         if (isNaN(num) || num < 1 || num > 5) {
           throw new Error(`第 ${i + 1} 行包含无效的维度值: ${v}`);
