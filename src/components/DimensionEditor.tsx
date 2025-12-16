@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Check, X } from '@phosphor-icons/react';
+import { Pencil, Check, X, CaretUp, CaretDown } from '@phosphor-icons/react';
 import { Dimension, VALUE_LABELS } from '@/lib/types';
 
 interface DimensionEditorProps {
@@ -42,10 +42,26 @@ export function DimensionEditor({ dimensions, onDimensionsChange }: DimensionEdi
     setEditingName('');
   };
 
+  const moveUp = (index: number) => {
+    if (index === 0) return;
+    const newDimensions = [...dimensions];
+    [newDimensions[index - 1], newDimensions[index]] = [newDimensions[index], newDimensions[index - 1]];
+    onDimensionsChange(newDimensions);
+  };
+
+  const moveDown = (index: number) => {
+    if (index === dimensions.length - 1) return;
+    const newDimensions = [...dimensions];
+    [newDimensions[index], newDimensions[index + 1]] = [newDimensions[index + 1], newDimensions[index]];
+    onDimensionsChange(newDimensions);
+  };
+
   const getValueColor = (value: number) => {
     if (value === 1) return 'bg-destructive/20 text-destructive';
-    if (value === 2) return 'bg-secondary/50 text-secondary-foreground';
-    return 'bg-accent/30 text-accent-foreground';
+    if (value === 2) return 'bg-destructive/10 text-destructive';
+    if (value === 3) return 'bg-secondary/50 text-secondary-foreground';
+    if (value === 4) return 'bg-accent/30 text-accent-foreground';
+    return 'bg-primary/20 text-primary';
   };
 
   return (
@@ -75,7 +91,27 @@ export function DimensionEditor({ dimensions, onDimensionsChange }: DimensionEdi
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-0">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        onClick={() => moveUp(index)}
+                        disabled={index === 0}
+                      >
+                        <CaretUp size={14} />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        onClick={() => moveDown(index)}
+                        disabled={index === dimensions.length - 1}
+                      >
+                        <CaretDown size={14} />
+                      </Button>
+                    </div>
                     <Label className="text-base font-semibold">{dimension.name}</Label>
                     <Button
                       size="icon"
@@ -98,14 +134,16 @@ export function DimensionEditor({ dimensions, onDimensionsChange }: DimensionEdi
                 value={[dimension.value]}
                 onValueChange={(value) => handleValueChange(index, value)}
                 min={1}
-                max={3}
+                max={5}
                 step={1}
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-muted-foreground mono">
-                <span>低</span>
-                <span>中</span>
-                <span>高</span>
+                <span>1</span>
+                <span>2</span>
+                <span>3</span>
+                <span>4</span>
+                <span>5</span>
               </div>
             </div>
           </div>

@@ -23,14 +23,14 @@ export function RadarChart({ dimensions, size = 400 }: RadarChartProps) {
     const centerX = width / 2;
     const centerY = height / 2;
 
-    const levels = 3;
+    const levels = 5;
     const angleSlice = (Math.PI * 2) / dimensions.length;
 
     const g = svg
       .append('g')
       .attr('transform', `translate(${centerX}, ${centerY})`);
 
-    const rScale = d3.scaleLinear().domain([1, 3]).range([0, radius]);
+    const rScale = d3.scaleLinear().domain([1, 5]).range([0, radius]);
 
     for (let level = 1; level <= levels; level++) {
       const levelRadius = (radius / levels) * level;

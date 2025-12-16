@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useKV } from '@github/spark/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Plus } from '@phosphor-icons/react';
+import { Plus, Export, Upload } from '@phosphor-icons/react';
 import { RadarChart } from '@/components/RadarChart';
 import { DimensionEditor } from '@/components/DimensionEditor';
 import { ProfileList } from '@/components/ProfileList';
 import { RadarProfile, DEFAULT_DIMENSIONS } from '@/lib/types';
+import { exportToCSV, downloadCSV, importFromCSV } from '@/lib/csv';
 import { toast } from 'sonner';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const profilesList = profiles || [];
   const selectedProfile = profilesList.find((p) => p.id === selectedProfileId);
@@ -37,7 +39,7 @@ function App() {
       name: profileName.trim(),
       dimensions: DEFAULT_DIMENSIONS.map((name) => ({
         name,
-        value: 2,
+        value: 3,
       })),
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -95,16 +97,83 @@ function App() {
     setProfileName('');
   };
 
+  const handleExport = () => {
+    if (profilesList.length === 0) {
+      toast.error('没有可导出的档案');
+      return;
+    }
+
+    const csvContent = exportToCSV(profilesList);
+    downloadCSV(csvContent);
+    toast.success(`已导出 ${profilesList.length} 个档案`);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const { profiles: importedProfiles, error } = importFromCSV(content);
+
+      if (error) {
+        toast.error(error);
+        return;
+      }
+
+      if (importedProfiles.length === 0) {
+        toast.error('没有找到有效的数据');
+        return;
+      }
+
+      setProfiles((current) => [...(current || []), ...importedProfiles]);
+      toast.success(`成功导入 ${importedProfiles.length} 个档案`);
+    };
+
+    reader.onerror = () => {
+      toast.error('文件读取失败');
+    };
+
+    reader.readAsText(file);
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
+      
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            潜力六边形雷达图
+            潜力五边形雷达图
           </h1>
           <p className="text-muted-foreground">
             可视化多维能力评估工具
           </p>
+          <div className="flex justify-center gap-3 mt-4">
+            <Button onClick={handleExport} variant="outline" size="sm">
+              <Export size={16} />
+              <span className="ml-2">导出 CSV</span>
+            </Button>
+            <Button onClick={handleImportClick} variant="outline" size="sm">
+              <Upload size={16} />
+              <span className="ml-2">导入 CSV</span>
+            </Button>
+          </div>
         </header>
 
         <div className="grid lg:grid-cols-3 gap-6">

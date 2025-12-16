@@ -16,12 +16,13 @@ export const DEFAULT_DIMENSIONS: string[] = [
   "业务分析能力",
   "沟通能力",
   "主动性",
-  "学习能力",
-  "图形图像能力"
+  "学习能力"
 ];
 
 export const VALUE_LABELS: Record<number, string> = {
-  1: "低",
-  2: "中",
-  3: "高"
+  1: "1",
+  2: "2",
+  3: "3",
+  4: "4",
+  5: "5"
 };
