@@ -12,11 +12,12 @@ export interface RadarProfile {
 }
 
 export const DEFAULT_DIMENSIONS: string[] = [
-  "工程能力",
   "业务分析能力",
-  "沟通能力",
+  "工程能力",
+  "模型能力",
+  "学习能力",
   "主动性",
-  "学习能力"
+  "沟通能力"
 ];
 
 export const VALUE_LABELS: Record<number, string> = {
