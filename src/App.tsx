@@ -24,6 +24,8 @@ import { exportToCSV, downloadCSV, importFromCSV } from '@/lib/csv';
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
 
+const DEFAULT_PROFILE_NAME = '新档案';
+
 function App() {
   const [profiles, setProfiles] = useLocalStorage<RadarProfile[]>('radar-profiles', []);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -34,6 +36,8 @@ function App() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitle, setEditingTitle] = useState('');
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [pendingImport, setPendingImport] = useState<{profiles: RadarProfile[], newDimensionNames: string[]} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -204,7 +208,7 @@ function App() {
     if (!deletedProfile) return;
 
     // 如果只剩一个档案且名字是「新档案」，不允许删除
-    if (profilesList.length === 1 && deletedProfile.name === '新档案') {
+    if (profilesList.length === 1 && deletedProfile.name === DEFAULT_PROFILE_NAME) {
       toast.error('这已经是最后一个档案了', {
         description: '请先创建其他档案，或修改此档案名称后再删除',
       });
@@ -224,10 +228,10 @@ function App() {
       const now = Date.now();
       const randomProfile: RadarProfile = {
         id: now.toString(),
-        name: '新档案',
+        name: DEFAULT_PROFILE_NAME,
         dimensions: DEFAULT_DIMENSIONS.map((name) => ({
           name,
-          value: Math.floor(Math.random() * 3) + 2, // 随机值 2-4
+          value: 3, // 使用固定默认值保持一致性
         })),
         createdAt: now,
         updatedAt: now,
@@ -311,7 +315,6 @@ function App() {
           : p
       )
     );
-    clearUndoHistory(); // 清空撤销历史
     toast.success('档案名称已更新');
   };
 
@@ -335,12 +338,17 @@ function App() {
         return;
       }
 
+      const svgWidth = svg.clientWidth || 500;
+      const svgHeight = svg.clientHeight || 500;
+
       const dataUrl = await toPng(chartRef.current, {
         quality: 1.0,
         pixelRatio: 2,
         backgroundColor: 'white',
-        width: 500,
-        height: 500,
+        width: svgWidth,
+        height: svgHeight,
+        skipFonts: true, // 跳过字体加载，避免CORS错误
+        cacheBust: true, // 避免缓存问题
         style: {
           margin: '0',
           padding: '0',
@@ -399,21 +407,21 @@ function App() {
         return;
       }
 
-      // 更新现有档案的维度名称
+      // 检查是否需要更新维度名称
       const newDimensionNames = importedProfiles[0].dimensions.map(d => d.name);
+      const currentDimensionNames = profilesList[0]?.dimensions.map(d => d.name) || [];
+      const namesDiffer = profilesList.length > 0 && 
+        !currentDimensionNames.every((name, idx) => name === newDimensionNames[idx]);
       
-      setProfiles((current) => {
-        const updated = (current || []).map(profile => ({
-          ...profile,
-          dimensions: profile.dimensions.map((dim, idx) => ({
-            ...dim,
-            name: newDimensionNames[idx] || dim.name,
-          })),
-        }));
-        return [...updated, ...importedProfiles];
-      });
-      
-      toast.success(`成功导入 ${importedProfiles.length} 个档案，并更新了维度名称`);
+      if (namesDiffer) {
+        // 显示确认对话框
+        setPendingImport({ profiles: importedProfiles, newDimensionNames });
+        setShowImportDialog(true);
+      } else {
+        // 直接导入，不更新维度名称
+        setProfiles((current) => [...(current || []), ...importedProfiles]);
+        toast.success(`成功导入 ${importedProfiles.length} 个档案`);
+      }
     };
 
     reader.onerror = () => {
@@ -433,6 +441,34 @@ function App() {
     setDeletedHistory([]);
     setShowResetDialog(false);
     toast.success('已重置所有数据');
+  };
+
+  const handleConfirmImport = (updateDimensions: boolean) => {
+    if (!pendingImport) return;
+
+    const { profiles: importedProfiles, newDimensionNames } = pendingImport;
+
+    setProfiles((current) => {
+      if (updateDimensions) {
+        // 更新现有档案的维度名称
+        const updated = (current || []).map(profile => ({
+          ...profile,
+          dimensions: profile.dimensions.map((dim, idx) => ({
+            ...dim,
+            name: newDimensionNames[idx] || dim.name,
+          })),
+        }));
+        toast.success(`成功导入 ${importedProfiles.length} 个档案，并更新了维度名称`);
+        return [...updated, ...importedProfiles];
+      } else {
+        // 只导入新档案，不更新维度名称
+        toast.success(`成功导入 ${importedProfiles.length} 个档案`);
+        return [...(current || []), ...importedProfiles];
+      }
+    });
+
+    setShowImportDialog(false);
+    setPendingImport(null);
   };
 
   return (
@@ -689,6 +725,37 @@ function App() {
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={handleResetAll} className="bg-destructive hover:bg-destructive/90">
               确认重置
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>检测到维度名称不同</AlertDialogTitle>
+            <AlertDialogDescription>
+              导入的 CSV 文件中的维度名称与当前档案的维度名称不同。
+              是否要更新所有现有档案的维度名称？
+              <br /><br />
+              <strong>当前维度：</strong>{profilesList[0]?.dimensions.map(d => d.name).join('、')}
+              <br />
+              <strong>导入维度：</strong>{pendingImport?.newDimensionNames.join('、')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowImportDialog(false);
+              setPendingImport(null);
+            }}>取消导入</AlertDialogCancel>
+            <Button 
+              variant="outline" 
+              onClick={() => handleConfirmImport(false)}
+            >
+              仅导入新档案
+            </Button>
+            <AlertDialogAction onClick={() => handleConfirmImport(true)}>
+              更新并导入
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
