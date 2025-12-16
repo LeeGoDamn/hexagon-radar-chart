@@ -8,7 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist - uncommented to allow committing build artifacts
 dist-ssr
 *-dist
 *.local

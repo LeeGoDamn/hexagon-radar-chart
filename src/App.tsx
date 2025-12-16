@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useKV } from '@github/spark/hooks';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { exportToCSV, downloadCSV, importFromCSV } from '@/lib/csv';
 import { toast } from 'sonner';
 
 function App() {
-  const [profiles, setProfiles] = useKV<RadarProfile[]>('radar-profiles', []);
+  const [profiles, setProfiles] = useLocalStorage<RadarProfile[]>('radar-profiles', []);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -22,11 +22,57 @@ function App() {
   const profilesList = profiles || [];
   const selectedProfile = profilesList.find((p) => p.id === selectedProfileId);
 
+  // 初始化示例数据
   useEffect(() => {
-    if (profilesList.length > 0 && !selectedProfileId) {
+    if (profilesList.length === 0) {
+      const now = Date.now();
+      const sampleProfiles: RadarProfile[] = [
+        {
+          id: (now + 1).toString(),
+          name: '张三 - 前端工程师',
+          dimensions: [
+            { name: '工程能力', value: 4 },
+            { name: '业务分析能力', value: 3 },
+            { name: '沟通能力', value: 4 },
+            { name: '主动性', value: 5 },
+            { name: '学习能力', value: 4 },
+          ],
+          createdAt: now + 1,
+          updatedAt: now + 1,
+        },
+        {
+          id: (now + 2).toString(),
+          name: '李四 - 后端工程师',
+          dimensions: [
+            { name: '工程能力', value: 5 },
+            { name: '业务分析能力', value: 4 },
+            { name: '沟通能力', value: 3 },
+            { name: '主动性', value: 4 },
+            { name: '学习能力', value: 4 },
+          ],
+          createdAt: now + 2,
+          updatedAt: now + 2,
+        },
+        {
+          id: (now + 3).toString(),
+          name: '王五 - 产品经理',
+          dimensions: [
+            { name: '工程能力', value: 2 },
+            { name: '业务分析能力', value: 5 },
+            { name: '沟通能力', value: 5 },
+            { name: '主动性', value: 4 },
+            { name: '学习能力', value: 3 },
+          ],
+          createdAt: now + 3,
+          updatedAt: now + 3,
+        },
+      ];
+      setProfiles(sampleProfiles);
+      setSelectedProfileId(sampleProfiles[0].id);
+    } else if (profilesList.length > 0 && !selectedProfileId) {
       setSelectedProfileId(profilesList[0].id);
     }
-  }, [profilesList, selectedProfileId]);
+  }, [profilesList.length, selectedProfileId]);
 
   const createNewProfile = () => {
     if (!profileName.trim()) {
@@ -159,7 +205,7 @@ function App() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            潜力五边形雷达图
+            六边形雷达图
           </h1>
           <p className="text-muted-foreground">
             可视化多维能力评估工具
@@ -253,7 +299,7 @@ function App() {
                 <div className="space-y-4">
                   <div className="text-6xl opacity-20">📊</div>
                   <div>
-                    <h3 className="text-xl font-semibold mb-2">欢迎使用潜力雷达</h3>
+                    <h3 className="text-xl font-semibold mb-2">欢迎使用六边形雷达图</h3>
                     <p className="text-muted-foreground">
                       点击左侧"新建档案"开始创建您的第一个能力评估档案
                     </p>

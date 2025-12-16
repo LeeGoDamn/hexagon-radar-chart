@@ -24,7 +24,7 @@ export function exportToCSV(profiles: RadarProfile[]): string {
   return [headers, ...rows].join('\n');
 }
 
-export function downloadCSV(content: string, filename: string = '潜力雷达数据.csv'): void {
+export function downloadCSV(content: string, filename: string = '六边形雷达图数据.csv'): void {
   const BOM = '\uFEFF';
   const blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
