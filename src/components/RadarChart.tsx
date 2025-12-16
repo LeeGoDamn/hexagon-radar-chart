@@ -16,7 +16,7 @@ export function RadarChart({ dimensions, size = 400 }: RadarChartProps) {
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
-    const margin = 80;
+    const margin = 120;
     const width = size;
     const height = size;
     const radius = Math.min(width, height) / 2 - margin;
@@ -59,27 +59,41 @@ export function RadarChart({ dimensions, size = 400 }: RadarChartProps) {
         .attr('stroke-width', 1)
         .attr('opacity', 0.4);
 
-      const labelRadius = radius + 30;
+      const labelRadius = radius + 35;
       const labelX = labelRadius * Math.cos(angle);
       const labelY = labelRadius * Math.sin(angle);
 
-      const text = g.append('text')
-        .attr('x', labelX)
-        .attr('y', labelY)
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'middle')
-        .attr('fill', 'var(--foreground)')
-        .style('font-size', '14px')
-        .style('font-weight', '500')
-        .text(dim.name);
-
-      if (Math.abs(labelX) < 5) {
-        text.attr('text-anchor', 'middle');
-      } else if (labelX > 0) {
-        text.attr('text-anchor', 'start');
-      } else {
-        text.attr('text-anchor', 'end');
+      const maxLineLength = 8;
+      const words = dim.name.split('');
+      const lines: string[] = [];
+      
+      for (let j = 0; j < words.length; j += maxLineLength) {
+        lines.push(words.slice(j, j + maxLineLength).join(''));
       }
+
+      const lineHeight = 16;
+      const totalHeight = lines.length * lineHeight;
+      const startY = labelY - (totalHeight / 2) + (lineHeight / 2);
+
+      lines.forEach((line, lineIndex) => {
+        const text = g.append('text')
+          .attr('x', labelX)
+          .attr('y', startY + (lineIndex * lineHeight))
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'middle')
+          .attr('fill', 'var(--foreground)')
+          .style('font-size', '14px')
+          .style('font-weight', '500')
+          .text(line);
+
+        if (Math.abs(labelX) < 5) {
+          text.attr('text-anchor', 'middle');
+        } else if (labelX > 0) {
+          text.attr('text-anchor', 'start');
+        } else {
+          text.attr('text-anchor', 'end');
+        }
+      });
     });
 
     const dataPoints = dimensions.map((dim, i) => {
