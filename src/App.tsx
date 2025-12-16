@@ -1,5 +1,202 @@
+import { useState, useEffect } from 'react';
+import { useKV } from '@github/spark/hooks';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Plus } from '@phosphor-icons/react';
+import { RadarChart } from '@/components/RadarChart';
+import { DimensionEditor } from '@/components/DimensionEditor';
+import { ProfileList } from '@/components/ProfileList';
+import { RadarProfile, DEFAULT_DIMENSIONS } from '@/lib/types';
+import { toast } from 'sonner';
+
 function App() {
-    return <div></div>
+  const [profiles, setProfiles] = useKV<RadarProfile[]>('radar-profiles', []);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+
+  const profilesList = profiles || [];
+  const selectedProfile = profilesList.find((p) => p.id === selectedProfileId);
+
+  useEffect(() => {
+    if (profilesList.length > 0 && !selectedProfileId) {
+      setSelectedProfileId(profilesList[0].id);
+    }
+  }, [profilesList, selectedProfileId]);
+
+  const createNewProfile = () => {
+    if (!profileName.trim()) {
+      toast.error('请输入档案名称');
+      return;
+    }
+
+    const newProfile: RadarProfile = {
+      id: Date.now().toString(),
+      name: profileName.trim(),
+      dimensions: DEFAULT_DIMENSIONS.map((name) => ({
+        name,
+        value: 2,
+      })),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    setProfiles((current) => [...(current || []), newProfile]);
+    setSelectedProfileId(newProfile.id);
+    setProfileName('');
+    setIsCreating(false);
+    toast.success('档案创建成功');
+  };
+
+  const updateCurrentProfile = (dimensions: RadarProfile['dimensions']) => {
+    if (!selectedProfile) return;
+
+    setProfiles((current) =>
+      (current || []).map((p) =>
+        p.id === selectedProfile.id
+          ? { ...p, dimensions, updatedAt: Date.now() }
+          : p
+      )
+    );
+  };
+
+  const deleteProfile = (id: string) => {
+    setProfiles((current) => (current || []).filter((p) => p.id !== id));
+    
+    if (selectedProfileId === id) {
+      const remaining = profilesList.filter((p) => p.id !== id);
+      setSelectedProfileId(remaining.length > 0 ? remaining[0].id : null);
+    }
+    
+    toast.success('档案已删除');
+  };
+
+  const duplicateProfile = (id: string) => {
+    const profile = profilesList.find((p) => p.id === id);
+    if (!profile) return;
+
+    const newProfile: RadarProfile = {
+      ...profile,
+      id: Date.now().toString(),
+      name: `${profile.name} (副本)`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    setProfiles((current) => [...(current || []), newProfile]);
+    setSelectedProfileId(newProfile.id);
+    toast.success('档案已复制');
+  };
+
+  const cancelCreating = () => {
+    setIsCreating(false);
+    setProfileName('');
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <header className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-2">
+            潜力六边形雷达图
+          </h1>
+          <p className="text-muted-foreground">
+            可视化多维能力评估工具
+          </p>
+        </header>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">档案管理</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isCreating ? (
+                  <div className="space-y-3">
+                    <Input
+                      placeholder="输入档案名称"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') createNewProfile();
+                        if (e.key === 'Escape') cancelCreating();
+                      }}
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button onClick={createNewProfile} className="flex-1">
+                        确认创建
+                      </Button>
+                      <Button onClick={cancelCreating} variant="outline" className="flex-1">
+                        取消
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button onClick={() => setIsCreating(true)} className="w-full">
+                    <Plus size={18} weight="bold" />
+                    <span className="ml-2">新建档案</span>
+                  </Button>
+                )}
+
+                <Separator />
+
+                <ProfileList
+                  profiles={profilesList}
+                  selectedProfileId={selectedProfileId}
+                  onSelectProfile={setSelectedProfileId}
+                  onDeleteProfile={deleteProfile}
+                  onDuplicateProfile={duplicateProfile}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="lg:col-span-2 space-y-6">
+            {selectedProfile ? (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl">{selectedProfile.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <RadarChart dimensions={selectedProfile.dimensions} size={500} />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">维度设置</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <DimensionEditor
+                      dimensions={selectedProfile.dimensions}
+                      onDimensionsChange={updateCurrentProfile}
+                    />
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card className="p-12 text-center">
+                <div className="space-y-4">
+                  <div className="text-6xl opacity-20">📊</div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">欢迎使用潜力雷达</h3>
+                    <p className="text-muted-foreground">
+                      点击左侧"新建档案"开始创建您的第一个能力评估档案
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
