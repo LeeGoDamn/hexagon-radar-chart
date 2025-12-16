@@ -34,18 +34,13 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Check for uncommitted changes in docs
+        run: |
+          if git diff --quiet -- docs/; then
+            echo "✓ No changes in docs directory"
+          else
+            echo "✗ Error: docs directory has uncommitted changes"
+            echo "Please run 'npm run build' locally and commit the generated artifacts"
+            git diff -- docs/
+            exit 1
+          fi
