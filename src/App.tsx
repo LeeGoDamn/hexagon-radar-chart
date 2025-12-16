@@ -410,6 +410,15 @@ function App() {
       // 检查是否需要更新维度名称
       const newDimensionNames = importedProfiles[0].dimensions.map(d => d.name);
       const currentDimensionNames = profilesList[0]?.dimensions.map(d => d.name) || [];
+      
+      // 检查维度数量是否匹配
+      if (profilesList.length > 0 && newDimensionNames.length !== currentDimensionNames.length) {
+        toast.error('导入失败：维度数量不匹配', {
+          description: `当前档案有 ${currentDimensionNames.length} 个维度，导入文件有 ${newDimensionNames.length} 个维度`
+        });
+        return;
+      }
+      
       const namesDiffer = profilesList.length > 0 && 
         !currentDimensionNames.every((name, idx) => name === newDimensionNames[idx]);
       
@@ -736,11 +745,17 @@ function App() {
             <AlertDialogTitle>检测到维度名称不同</AlertDialogTitle>
             <AlertDialogDescription>
               导入的 CSV 文件中的维度名称与当前档案的维度名称不同。
-              是否要更新所有现有档案的维度名称？
-              <br /><br />
-              <strong>当前维度：</strong>{profilesList[0]?.dimensions.map(d => d.name).join('、')}
-              <br />
-              <strong>导入维度：</strong>{pendingImport?.newDimensionNames.join('、')}
+              是否要更新所有现有 {profilesList.length} 个档案的维度名称？
+              <div className="mt-4 space-y-2">
+                <div className="text-sm">
+                  <strong className="text-foreground">当前维度：</strong>
+                  <div className="mt-1 text-muted-foreground">{profilesList[0]?.dimensions.map(d => d.name).join('、')}</div>
+                </div>
+                <div className="text-sm">
+                  <strong className="text-foreground">导入维度：</strong>
+                  <div className="mt-1 text-muted-foreground">{pendingImport?.newDimensionNames.join('、')}</div>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
