@@ -43,8 +43,8 @@ export function ProfileList({
   }
 
   return (
-    <ScrollArea className="max-h-[calc(100vh-280px)]">
-      <div className="space-y-3">
+    <ScrollArea className="h-[calc(100vh-320px)] pr-4">
+      <div className="space-y-3 pr-2">
         {profiles.map((profile) => (
           <Card
             key={profile.id}
